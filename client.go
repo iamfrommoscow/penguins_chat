@@ -1,7 +1,9 @@
 package main
 
 import (
+	"chat/db"
 	"chat/microChat"
+	"chat/models"
 	"github.com/dgrijalva/jwt-go"
 	"context"
 	"encoding/json"
@@ -60,6 +62,12 @@ func (c *Client) readPump() {
 			Login: c.login,
 			Message: string(message),
 		}
+
+		dbMessage := models.Message{From:uint(c.ID), To:0, Text:msg.Message}
+		err = db.NewMessage(dbMessage)
+		if err != nil {
+			fmt.Println("DB write msg error: ", err)
+		}
 		//message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
 		c.hub.broadcast <- msg
 	}
@@ -106,15 +114,16 @@ func (c *Client) writePump() {
 	}
 }
 
-func IsAutorized(w http.ResponseWriter, r *http.Request) (bool, string) {
+func IsAutorized(w http.ResponseWriter, r *http.Request) (bool, string, uint) {
 	var login string
+	var ID uint
 
 	cookie, err := r.Cookie("sessionid")
 
 	if err != nil {
 		fmt.Println("No cookie")
 		login = "Anonymous"
-		return false, login
+		return false, login, 0
 	}
 
 	ctx := context.Background()
@@ -130,9 +139,13 @@ func IsAutorized(w http.ResponseWriter, r *http.Request) (bool, string) {
 	if _, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
 		claims, _ := token.Claims.(jwt.MapClaims)
 		login = claims["userLogin"].(string)
+		temp := claims["userID"]
+		mytemp := uint(temp.(float64))
+
+		ID = mytemp
 		if login == "" {
 			fmt.Println("Empty login")
-			return false, "Anonymous"
+			return false, "Anonymous", 0
 		}
 		userLogin, err := UserManager.Check(ctx,
 			&microChat.User{
@@ -142,13 +155,15 @@ func IsAutorized(w http.ResponseWriter, r *http.Request) (bool, string) {
 
 		if userLogin == nil {
 			fmt.Println("No such user")
-			return false, "Anonymous"
+			return false, "Anonymous", 0
 		}
 		login = userLogin.Login
+		ID = uint(userLogin.ID)
 	} else {
 		login = "Anonymous"
+		ID = 0
 	}
-	return true, login
+	return true, login, ID
 }
 
 func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
@@ -160,11 +175,20 @@ func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, login := IsAutorized(w, r)
+	_, login, ID := IsAutorized(w, r)
 
-	client := &Client{hub: hub, conn: conn, send: make(chan *Message), login: login}
+	client := &Client{hub: hub, conn: conn, send: make(chan *Message), login: login, ID: uint64(ID)}
 	client.hub.register <- client
 
 	go client.writePump()
 	go client.readPump()
+}
+
+func getMessages(w http.ResponseWriter, r *http.Request) {
+	messages := db.GlobalChatAll()
+	fmt.Println(messages)
+	w.WriteHeader(http.StatusOK)
+	b, _ := json.Marshal(messages)
+	fmt.Println(b)
+	w.Write(b)
 }

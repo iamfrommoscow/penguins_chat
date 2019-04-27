@@ -43,11 +43,19 @@ func NewMessage(message models.Message) error {
 			return nil
 		}
 		query += authorizedToGlobalChat
-		Exec(query, message.From, message.Text)
+		_, err := Exec(query, message.From, message.Text)
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
 		return nil
 	}
 	query += userToUser
-	Exec(query, message.From, message.To, message.Text)
+	_, err := Exec(query, message.From, message.To, message.Text)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
 	return nil
 }
 
