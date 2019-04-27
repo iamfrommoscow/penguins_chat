@@ -2,13 +2,11 @@ package main
 
 import (
 	"chat/microChat"
-	"context"
 	"flag"
 	"fmt"
+	"google.golang.org/grpc"
 	"log"
 	"net/http"
-
-	"google.golang.org/grpc"
 )
 
 var addr = flag.String("addr", ":8082", "http service address")
@@ -18,6 +16,10 @@ var UserManager microChat.UserCheckerClient = nil
 func main() {
 	flag.Parse()
 
+	hub := newHub()
+	go hub.run()
+
+	//create grpc client
 	grcpConn, err := grpc.Dial(
 		"127.0.0.1:8083",
 		grpc.WithInsecure(),
@@ -29,17 +31,9 @@ func main() {
 
 	UserManager = microChat.NewUserCheckerClient(grcpConn)
 
-	ctx := context.Background()
-
-	userLogin, err := UserManager.Check(ctx,
-		&microChat.User{
-			Login:     "ping",
-		})
-	fmt.Println("userLogin", userLogin, err)
-
-	//http.HandleFunc("/chat/ws", func(w http.ResponseWriter, r *http.Request) {
-	//	serveWs(hub, w, r)
-	//})
+	http.HandleFunc("/chat/ws", func(w http.ResponseWriter, r *http.Request) {
+		serveWs(hub, w, r)
+	})
 
 	fmt.Println("Chat server started")
 
