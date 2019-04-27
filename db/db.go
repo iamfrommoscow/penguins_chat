@@ -47,7 +47,7 @@ func RowsToMessages(rows *pgx.Rows) []models.Message {
 	messages := []models.Message{}
 	for rows.Next() {
 		entry := models.Message{}
-		if err := rows.Scan(&entry.From, &entry.Text); err != nil {
+		if err := rows.Scan(&entry.ID, &entry.From, &entry.Text); err != nil {
 			fmt.Println(err)
 		}
 		messages = append(messages, entry)
