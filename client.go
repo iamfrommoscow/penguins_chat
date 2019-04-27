@@ -183,3 +183,12 @@ func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	go client.writePump()
 	go client.readPump()
 }
+
+func getMessages(w http.ResponseWriter, r *http.Request) {
+	messages := db.GlobalChatAll()
+	fmt.Println(messages)
+	w.WriteHeader(http.StatusOK)
+	b, _ := json.Marshal(messages)
+	fmt.Println(b)
+	w.Write(b)
+}

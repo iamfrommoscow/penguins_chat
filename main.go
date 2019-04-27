@@ -45,6 +45,7 @@ func main() {
 	UserManager = microChat.NewUserCheckerClient(grcpConn)
 
 	r := mux.NewRouter()
+	r.HandleFunc("/messages", getMessages)
 	r.HandleFunc("/chat/ws", func(w http.ResponseWriter, r *http.Request) {
 		serveWs(hub, w, r)
 	})
