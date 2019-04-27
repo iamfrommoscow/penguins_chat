@@ -18,6 +18,9 @@ var UserManager microChat.UserCheckerClient = nil
 func main() {
 	flag.Parse()
 
+	hub := newHub()
+	go hub.run()
+
 	grcpConn, err := grpc.Dial(
 		"127.0.0.1:8083",
 		grpc.WithInsecure(),
@@ -37,9 +40,9 @@ func main() {
 		})
 	fmt.Println("userLogin", userLogin, err)
 
-	//http.HandleFunc("/chat/ws", func(w http.ResponseWriter, r *http.Request) {
-	//	serveWs(hub, w, r)
-	//})
+	http.HandleFunc("/chat/ws", func(w http.ResponseWriter, r *http.Request) {
+		serveWs(hub, w, r)
+	})
 
 	fmt.Println("Chat server started")
 
