@@ -7,6 +7,10 @@ import (
 	"google.golang.org/grpc"
 	"log"
 	"net/http"
+	"os"
+
+	"github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
 )
 
 var addr = flag.String("addr", ":8082", "http service address")
@@ -31,13 +35,18 @@ func main() {
 
 	UserManager = microChat.NewUserCheckerClient(grcpConn)
 
-	http.HandleFunc("/chat/ws", func(w http.ResponseWriter, r *http.Request) {
+	r := mux.NewRouter()
+	r.HandleFunc("/chat/ws", func(w http.ResponseWriter, r *http.Request) {
 		serveWs(hub, w, r)
 	})
+	//http.HandleFunc("/chat/ws", func(w http.ResponseWriter, r *http.Request) {
+	//	serveWs(hub, w, r)
+	//})
 
 	fmt.Println("Chat server started")
 
-	err = http.ListenAndServe(*addr, nil)
+	//err = http.ListenAndServe(*addr, nil)
+	err = http.ListenAndServe(":8082", handlers.LoggingHandler(os.Stdout, r))
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
