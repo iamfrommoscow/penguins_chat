@@ -1,15 +1,14 @@
 package main
 
 import (
-	//"chat/microChat"
-	//"context"
+	"chat/microChat"
+	"github.com/dgrijalva/jwt-go"
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"time"
-
-	//"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/websocket"
 )
 
@@ -19,6 +18,8 @@ const (
 	pingPeriod = (pongWait * 9) / 10
 	maxMessageSize = 512
 )
+
+var SECRET = []byte("myawesomesecret")
 
 var (
 	newline = []byte{'\n'}
@@ -105,6 +106,51 @@ func (c *Client) writePump() {
 	}
 }
 
+func IsAutorized(w http.ResponseWriter, r *http.Request) (bool, string) {
+	var login string
+
+	cookie, err := r.Cookie("sessionid")
+
+	if err != nil {
+		fmt.Println("No cookie")
+		login = "Anonymous"
+		return false, login
+	}
+
+	ctx := context.Background()
+
+	token, err := jwt.Parse(cookie.Value, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			w.WriteHeader(http.StatusForbidden)
+			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+		}
+		return SECRET, nil
+	})
+
+	if _, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		claims, _ := token.Claims.(jwt.MapClaims)
+		login = claims["userLogin"].(string)
+		if login == "" {
+			fmt.Println("Empty login")
+			return false, "Anonymous"
+		}
+		userLogin, err := UserManager.Check(ctx,
+			&microChat.User{
+				Login:     login,
+			})
+		fmt.Println("userLogin", userLogin, err)
+
+		if userLogin == nil {
+			fmt.Println("No such user")
+			return false, "Anonymous"
+		}
+		login = userLogin.Login
+	} else {
+		login = "Anonymous"
+	}
+	return true, login
+}
+
 func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	fmt.Println("In chat")
 
@@ -114,7 +160,9 @@ func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := &Client{hub: hub, conn: conn, send: make(chan *Message), login: "login"}
+	_, login := IsAutorized(w, r)
+
+	client := &Client{hub: hub, conn: conn, send: make(chan *Message), login: login}
 	client.hub.register <- client
 
 	go client.writePump()
