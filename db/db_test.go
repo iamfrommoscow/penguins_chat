@@ -110,8 +110,16 @@ func TestCreateMessages(t *testing.T)  {
 
 	UpdateMessage(delID-1, "updated")
 	
-
-
+	CreateUser(1, "test_user")
+	login, _ := GetLogin(1)
+	if login != "test_user" {
+		t.Error("Не создал юзера")
+	}
+	CreateUser(1, "test_user1")
+	login, _ = GetLogin(1)
+	if login != "test_user1" {
+		t.Error("Не апдейтнул юзера")
+	}
 
 }
 
