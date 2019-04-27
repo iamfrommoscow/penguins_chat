@@ -17,7 +17,7 @@ UPDATE users
 SET login = $2
 WHERE id = $1;`
 
-func CreateUser(id int, login string) error {
+func CreateUser(id uint, login string) error {
 	_, err := Exec(insertUser, id, login)
 	if err != nil {
 		_, err := Exec(updateLogin, id, login)
@@ -35,7 +35,7 @@ FROM users
 WHERE id = $1;
 `
 
-func GetLogin(id int) (string, error) {
+func GetLogin(id uint) (string, error) {
 	var login string
 	err := connection.QueryRow(getLoginByID, id).Scan(&login)
 	if err != nil {

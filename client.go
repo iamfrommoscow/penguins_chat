@@ -64,7 +64,8 @@ func (c *Client) readPump() {
 		}
 
 		dbMessage := models.Message{From:uint(c.ID), To:0, Text:msg.Message}
-		err = db.NewMessage(dbMessage)
+		err = db.CreateUser(dbMessage.From, c.login)
+		_, err = db.NewMessage(dbMessage)
 		if err != nil {
 			fmt.Println("DB write msg error: ", err)
 		}
@@ -186,9 +187,15 @@ func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 
 func getMessages(w http.ResponseWriter, r *http.Request) {
 	messages := db.GlobalChatAll()
-	fmt.Println(messages)
+	var compressedMessages []Message
+	for _, message := range messages {
+		newCompressedMessage := Message{}
+		newCompressedMessage.Login, _ = db.GetLogin(message.From)  
+		newCompressedMessage.Message = message.Text
+		compressedMessages = append(compressedMessages, newCompressedMessage)
+	}
+
 	w.WriteHeader(http.StatusOK)
-	b, _ := json.Marshal(messages)
-	fmt.Println(b)
+	b, _ := json.Marshal(compressedMessages)
 	w.Write(b)
 }
