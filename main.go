@@ -1,6 +1,7 @@
 package main
 
 import (
+	"chat/db"
 	"chat/microChat"
 	"flag"
 	"fmt"
@@ -19,6 +20,14 @@ var UserManager microChat.UserCheckerClient = nil
 
 func main() {
 	flag.Parse()
+
+	err := db.Connect()
+	if err != nil {
+		fmt.Println("Connection error: ", err)
+		return
+	}
+	defer db.Disconnect()
+
 
 	hub := newHub()
 	go hub.run()
