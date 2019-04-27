@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/jackc/pgx"
 	"io/ioutil"
+	"strings"
 	"os"
 )
 
@@ -25,7 +26,13 @@ func initConfig() error {
 	}
 	file, err := os.Open(dir + "/configs/database.json")
 	if err != nil {
-		fmt.Println(err)
+		dirRep := strings.Replace(dir, "/db", "", -1)
+		file, err = os.Open(dirRep + "/configs/database.json")
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
+
 	}
 	body, _ := ioutil.ReadAll(file)
 	err = json.Unmarshal(body, &connectionConfig)
